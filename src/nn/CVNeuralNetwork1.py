@@ -1,6 +1,8 @@
 import pennylane as qml
 import torch
 import torch.nn as nn
+import os
+from qiskit_ionq import IonQProvider
 
 
 class CVNeuralNetwork1(nn.Module):
@@ -60,9 +62,20 @@ class CVNeuralNetwork1(nn.Module):
             torch.randn(num_layers, num_qumodes, device=self.device) * active_sd,
             requires_grad=True,
         )
+        # self.dev = qml.device(
+        #     "strawberryfields.fock", wires=num_qumodes, cutoff_dim=cutoff_dim
+        # )
+        # I added this.
+        provider = IonQProvider("uPshzBiQ04JDnTJBbcEmoCvX1Sf0MToK")
+
         self.dev = qml.device(
-            "strawberryfields.fock", wires=num_qumodes, cutoff_dim=cutoff_dim
+            "qiskit.ionq",
+            wires=num_qumodes,
+            backend="ionq_simulator",   
+            provider=provider,          
+            shots=1000
         )
+
         self.circuit = qml.QNode(self._quantum_circuit, self.dev, interface="torch")
 
         self.activation = nn.Tanh()

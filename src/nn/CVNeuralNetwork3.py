@@ -1,6 +1,8 @@
 import pennylane as qml
 import torch
 import torch.nn as nn
+import os
+from qiskit_ionq import IonQProvider
 
 
 class CVNeuralNetwork3(nn.Module):
@@ -73,9 +75,20 @@ class CVNeuralNetwork3(nn.Module):
                 torch.zeros(num_qumodes, device=self.device)
             )
 
+        # self.dev = qml.device(
+        #     "strawberryfields.fock", wires=num_qumodes, cutoff_dim=cutoff_dim
+        # )
+        #I added this
+        provider = IonQProvider("uPshzBiQ04JDnTJBbcEmoCvX1Sf0MToK")
+
         self.dev = qml.device(
-            "strawberryfields.fock", wires=num_qumodes, cutoff_dim=cutoff_dim
+            "qiskit.ionq",
+            wires=num_qumodes,
+            backend="ionq_simulator",
+            provider=provider,             
+            shots=1000
         )
+
         self.circuit = qml.QNode(self._quantum_circuit, self.dev, interface="torch")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
