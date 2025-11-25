@@ -90,14 +90,34 @@ class DVQuantumLayer(nn.Module):
             )
         self._initialize_weights()
 
-        self.dev = qml.device("default.qubit", wires=self.num_qubits, shots=None)
+        qml_device_name = args.get("qml_device", "default.qubit")
+        shots = args.get("shots", None)
+
+        # Automatically choose diff_method based on device
+        if "ionq" in qml_device_name.lower() or (shots and shots > 0):
+            diff_method = "finite-diff"  # IonQ with shots needs this
+        else:
+            diff_method = "backprop"  # Local simulator is fastest
+
+        # Create device with args settings
+        self.dev = qml.device(qml_device_name, wires=self.num_qubits, shots=shots)
+
         self.circuit = qml.QNode(
-            self._quantum_circuit, self.dev, interface="torch", diff_method=diff_method
+            self._quantum_circuit, 
+            self.dev, 
+            interface="torch", 
+            diff_method=diff_method
         )
 
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # return torch.stack([self.circuit(sample) for sample in x]) # this line does the same but very slow since it requires running the quantum circuit for each input instance
-        return self.circuit(x)   # vectorized input, no Python loop.. transpose in the main function or here is important
+        outs = []
+        for sample in x:  # ← LOOP through batch!
+            y = self.circuit(sample)
+            if isinstance(y, (list, tuple)):
+                y = torch.stack([e if isinstance(e, torch.Tensor) else torch.as_tensor(e) for e in y])
+            outs.append(y)
+        return torch.stack(outs)
 
     def _quantum_circuit(self, x):
         if self.encoding == "amplitude":

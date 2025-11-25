@@ -3,6 +3,9 @@ import torch
 import matplotlib.pyplot as plt
 import numpy as np
 
+os.environ["IONQ_API_KEY"] = "k21OFq6V4kL7K9uY0G3ArojITF1IgMvx"
+
+
 from src.utils.logger import Logging
 from src.nn.pde import helmholtz_operator
 from src.utils.plot_prediction import plt_prediction
@@ -11,11 +14,12 @@ import src.trainer.helmholtz_train as helmholtz_train
 from src.nn.DVPDESolver import DVPDESolver
 from src.nn.CVPDESolver import CVPDESolver
 from src.nn.ClassicalSolver import ClassicalSolver
+# from src.utils.qiskit_backend import build_qiskit_backend  # <--- REMOVED
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 mode = "hybrid"
-num_qubits = 2
+num_qubits = 5
 output_dim = 1
 input_dim = 2
 hidden_dim = 50
@@ -25,11 +29,11 @@ classic_network = [input_dim, hidden_dim, output_dim]
 
 
 args = {
-    "batch_size": 64,
-    "epochs": 20000,
-    "lr": 0.0001,
+    "batch_size": 5,
+    "epochs": 5,
+    "lr": 0.001,
     "seed": 1,
-    "print_every": 100,
+    "print_every": 1,
     "log_path": "./checkpoints/helmholtz",
     "input_dim": input_dim,
     "output_dim": output_dim,
@@ -37,24 +41,28 @@ args = {
     "hidden_dim": hidden_dim,
     "num_quantum_layers": num_quantum_layers,
     "classic_network": classic_network,
-    "q_ansatz": "cascade",  # options: None , alternate, layered , cascade, cross_mesh ,farhi
+    "q_ansatz": "cascade",  
     "mode": mode,
     "activation": "tanh",  
-    "shots": None,  # Analytical gradients enabled
+    "shots": 100,  # <--- Kept shots
     "problem": "helmholtz",
-    "solver": "CV",  # options : "CV", "Classical", "DV"
+    "solver": "DV",  
     "device": DEVICE,
     "method": "None",
-    "cutoff_dim": cutoff_dim,  # num_qubits >= cutoff_dim
-    "class": "CVNeuralNetwork1",  # options CVNeuralNetwork1, CVNeuralNetwork2, CVNeuralNetwork3
-    "encoding": "None",  # options : "ampiltude" , "angle" for DV , none for others
+    "cutoff_dim": cutoff_dim,
+    "class": "QNeuralNetwork1", 
+    "encoding": "angle",
+    "loss_pde_weight": 1.0,
+    "loss_bc_weight": 100.0,  # Strongly enforce boundary conditions
+    # --- REMOVED ALL QISKIT_REMOTE ARGS ---
+    "qml_device": "ionq.simulator",  # <--- SET TO "ionq"
 }
 
 
 A1 = 1
 A2 = 4
 LAMBDA = 1.0
-num_points = 100
+num_points = 50
 
 dom_coords = torch.tensor([[-1.0, -1.0], [1.0, 1.0]], dtype=torch.float32).to(DEVICE)
 
@@ -74,10 +82,8 @@ X_star = torch.hstack((t.flatten().unsqueeze(1), x.flatten().unsqueeze(1))).to(D
 
 log_path = args["log_path"]
 logger = Logging(log_path)
-# Initialize the hybrid model
-# Example data (ensure double precision)
-# SIZE = 4
 
+# --- REMOVED BACKEND BUILDING LOGIC ---
 
 if args["solver"] == "CV":
     model = CVPDESolver(args, logger, X_star, DEVICE)
@@ -102,8 +108,6 @@ helmholtz_train.train(model)
 model.save_state()
 
 model.logger.print("Training completed successfuly!")
-
-
 
 u_star = u(X_star, A1, A2)
 f_star = f(X_star, A1, A2, LAMBDA)

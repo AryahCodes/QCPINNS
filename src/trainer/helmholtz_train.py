@@ -48,10 +48,9 @@ def train(model):
         loss_bc4 = model.loss_fn(u_bc4_pred, u_bc4_batch)
 
         loss_bc = loss_bc1 + loss_bc2 + loss_bc3 + loss_bc4
-        if model.args["solver"] == "CV":
-            loss = 0.1 * loss_r + 1 * (loss_bc)
-        else:
-            loss = loss_r + 10.0 * (loss_bc)
+        loss_pde_weight = getattr(model, 'loss_pde_weight', 1.0)
+        loss_bc_weight = getattr(model, 'loss_bc_weight', 10.0)
+        loss = loss_pde_weight * loss_r + loss_bc_weight * loss_bc
         time_end = time.time()
         time_taken = time_end - time_start
         if it % model.args["print_every"] == 0:

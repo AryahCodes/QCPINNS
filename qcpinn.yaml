@@ -1,32 +1,27 @@
-name: qcpinn
+name: qcpinn-final
 channels:
+  - pytorch
   - conda-forge
   - defaults
 dependencies:
   - python=3.10
   - pip
-  - numpy=1.23.5        # compatible with PennyLane 0.29 and SciPy 1.10.1
-  - scipy=1.10.1         # includes simps()
-  - sympy=1.12
-  - pytorch=2.1.2        # stable ARM build for macOS
-  - torchvision=0.16.2
-  - torchaudio=2.1.2
+  - numpy=1.26.*
+  - scipy<1.12
+  - sympy
   - matplotlib
   - jupyter
+  - ipykernel
+  - pytorch::pytorch=2.1.2
+  - pytorch::torchvision=0.16.2
+  - pytorch::torchaudio=2.1.2
   - pip:
-      # --- PennyLane + Quantum Plugins ---
-      - pennylane==0.29.0
-      - pennylane-sf==0.29.0
-      - strawberryfields==0.23.0
-      - thewalrus==0.21.0
-      - pennylane-qiskit==0.29.0
-      - xanadu-cloud-client==0.3.2
-
-      # --- Supporting Libraries ---
-      - autoray==0.6.12
-      - qiskit-ibm-runtime==0.29.0
-      - qiskit==1.2.4
-      - qiskit-aer==0.16.0
-      - qiskit_ionq==0.5.4    # IonQ provider (you added this)
-      - networkx==3.2.1
-      - requests
+    - pennylane
+    - pennylane-lightning
+    - pennylane-sf
+    - strawberryfields
+    - pennylane-qiskit
+    - qiskit
+    - qiskit-aer
+    - qiskit-ionq
+    - pennylane-ionq        # <--- ADD THIS LINE

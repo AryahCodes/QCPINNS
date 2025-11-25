@@ -120,34 +120,41 @@ def helmholtz_operator(
     fluid_model,
     x1,
     x2,
+    use_finite_diff=True,  # ← ADD THIS (default True for IonQ)
+    h=1e-4
 ):
     """
     Operator to compute residuals for the 2D helmholtz equation
+    
+    Args:
+        use_finite_diff: Use finite differences (fast on IonQ) vs autograd
+        h: Step size for finite differences
     """
 
     LAMBDA = 1.0
-
-    x1.requires_grad_(True)
-    x2.requires_grad_(True)
-    u = fluid_model(torch.concatenate((x1, x2), 1))
-
-    # compute gradients with respect to x1 and x2
-    u_x1 = torch.autograd.grad(
-        u, x1, grad_outputs=torch.ones_like(u), create_graph=True
-    )[0]
-
-    u_x2 = torch.autograd.grad(
-        u, x2, grad_outputs=torch.ones_like(u), create_graph=True
-    )[0]
-
-    u_xx1 = torch.autograd.grad(
-        u_x1, x1, grad_outputs=torch.ones_like(u_x1), create_graph=True
-    )[0]
-
-    u_xx2 = torch.autograd.grad(
-        u_x2, x2, grad_outputs=torch.ones_like(u_x2), create_graph=True
-    )[0]
-
-    residual = u_xx1 + u_xx2 + LAMBDA * u
-
-    return [u, residual]
+    
+    x1 = x1.clone().detach()
+    x2 = x2.clone().detach()
+        
+        # Center point
+    x_center = torch.cat([x1, x2], dim=1)
+    u_center = fluid_model(x_center)
+        
+        # 4 perturbed points (no gradients!)
+    x1_plus = torch.cat([x1 + h, x2], dim=1)
+    x1_minus = torch.cat([x1 - h, x2], dim=1)
+    x2_plus = torch.cat([x1, x2 + h], dim=1)
+    x2_minus = torch.cat([x1, x2 - h], dim=1)
+        
+    u_x1_plus = fluid_model(x1_plus)
+    u_x1_minus = fluid_model(x1_minus)
+    u_x2_plus = fluid_model(x2_plus)
+    u_x2_minus = fluid_model(x2_minus)
+        
+        # Second derivatives
+    u_xx1 = (u_x1_plus - 2*u_center + u_x1_minus) / (h**2)
+    u_xx2 = (u_x2_plus - 2*u_center + u_x2_minus) / (h**2)
+        
+    residual = u_xx1 + u_xx2 + LAMBDA * u_center
+        
+    return [u_center, residual]
